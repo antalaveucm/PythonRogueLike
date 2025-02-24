@@ -1,1 +1,0 @@
-dejavu10x10_gs_tc
