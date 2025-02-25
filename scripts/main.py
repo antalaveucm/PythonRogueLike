@@ -1,16 +1,15 @@
 import copy
 import tcod
-from input_handlers import EventHandler
 import entity_factories
 from engine import Engine
 from procgen import generate_dungeon
 
 def main() -> None:
-    screen_width = 160
-    screen_height = 100
+    screen_width = 80
+    screen_height = 50
 
-    map_width = 160
-    map_height = 100
+    map_width = 80
+    map_height = 45
 
     room_max_size = 15
     room_min_size = 6
@@ -24,21 +23,23 @@ def main() -> None:
         tiles, 32, 8, tcod.tileset.CHARMAP_TCOD
     )
 
-    event_handler = EventHandler()
-
     player = copy.deepcopy(entity_factories.player)
 
-    game_map = generate_dungeon(
+    engine = Engine(player=player)
+
+    # Generate a new dungeon using the procedurally generated room generator.
+    engine.game_map = generate_dungeon(
         max_rooms=max_rooms,
         room_min_size=room_min_size,
         room_max_size=room_max_size,
         map_width=map_width,
         map_height=map_height,
         max_monsters_per_room=max_monsters_per_room,
-        player=player
+        engine=engine
     )
-    engine = Engine(event_handler=event_handler, game_map=game_map, player=player)
-    
+    engine.update_fov()
+
+    # Create a new root console for the game's output. This console will be rendered
     with tcod.context.new_terminal(
         screen_width,
         screen_height,
@@ -50,9 +51,7 @@ def main() -> None:
         while True:
             engine.render(console=root_console, context=context)
 
-            events = tcod.event.wait()
-
-            engine.handle_events(events)
+            engine.event_handler.handle_events()
 
 if __name__ == "__main__":
     main()
