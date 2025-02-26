@@ -53,12 +53,22 @@ def place_entities(
                 entity_factories.orc.spawn(dungeon, x, y)
             else:
                 entity_factories.troll.spawn(dungeon, x, y)
+
     for i in range(number_of_items):
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
 
         if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            entity_factories.health_potion.spawn(dungeon, x, y)
+            item_chance = random.random()
+
+            if item_chance < 0.5:
+                entity_factories.health_potion.spawn(dungeon, x, y)
+            elif item_chance < 0.65:
+                entity_factories.fireball_scroll.spawn(dungeon, x, y)
+            elif item_chance < 0.8:
+                entity_factories.confusion_scroll.spawn(dungeon, x, y)
+            else:
+                entity_factories.lightning_scroll.spawn(dungeon, x, y)
 
 def tunnel_between(
     start: Tuple[int, int], end: Tuple[int, int]
