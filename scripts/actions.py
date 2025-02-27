@@ -5,9 +5,11 @@ from typing import Optional, Tuple, TYPE_CHECKING
 import color
 import exceptions
 
+import input_handlers
+
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Actor, Entity, Item
+    from entity import Actor, Entity, Item, Container
 
 class Action:
     def __init__(self, entity: Actor) -> None:
@@ -30,30 +32,6 @@ class Action:
         """
         raise NotImplementedError()
 
-class PickupAction(Action):
-    """Pickup an item and add it to the inventory, if there is room for it."""
-
-    def __init__(self, entity: Actor):
-        super().__init__(entity)
-
-    def perform(self) -> None:
-        actor_location_x = self.entity.x
-        actor_location_y = self.entity.y
-        inventory = self.entity.inventory
-
-        for item in self.engine.game_map.items:
-            if actor_location_x == item.x and actor_location_y == item.y:
-                if len(inventory.items) >= inventory.capacity:
-                    raise exceptions.Impossible("Your inventory is full.")
-
-                self.engine.game_map.entities.remove(item)
-                item.parent = self.entity.inventory
-                inventory.items.append(item)
-
-                self.engine.message_log.add_message(f"You picked up the {item.name}!")
-                return
-
-        raise exceptions.Impossible("There is nothing here to pick up.")
     
 class ItemAction(Action):
     def __init__(
@@ -165,6 +143,31 @@ class EquipAction(Action):
 
     def perform(self) -> None:
         self.entity.equipment.toggle_equip(self.item)
+
+class PickupAction(Action):
+    """Pickup an item and add it to the inventory, if there is room for it."""
+
+    def __init__(self, entity: Actor):
+        super().__init__(entity)
+
+    def perform(self) -> None:
+        actor_location_x = self.entity.x
+        actor_location_y = self.entity.y
+        inventory = self.entity.inventory
+
+        for item in self.engine.game_map.items:
+            if actor_location_x == item.x and actor_location_y == item.y:
+                if len(inventory.items) >= inventory.capacity:
+                    raise exceptions.Impossible("Your inventory is full.")
+
+                self.engine.game_map.entities.remove(item)
+                item.parent = self.entity.inventory
+                inventory.items.append(item)
+
+                self.engine.message_log.add_message(f"You picked up the {item.name}!")
+                return
+
+        raise exceptions.Impossible("There is nothing here to pick up.")
 
 class WaitAction(Action):
     def perform(self) -> None:
