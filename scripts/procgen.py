@@ -22,6 +22,11 @@ max_monsters_by_floor = [
     (6, 5),
 ]
 
+max_chests_by_floor = [
+    (0, 1),
+    (5, 2),
+]
+
 item_chances: Dict[int, List[Tuple[Entity, int]]] = {
     0: [(entity_factories.health_potion, 35)],
     2: [(entity_factories.confusion_scroll, 10)],
@@ -34,6 +39,12 @@ enemy_chances: Dict[int, List[Tuple[Entity, int]]] = {
     3: [(entity_factories.troll, 15)],
     5: [(entity_factories.troll, 30)],
     7: [(entity_factories.troll, 60)],
+}
+
+chest_chances: Dict[int, List[Tuple[Entity, int]]] = {
+    0: [(entity_factories.chest, 15)],
+    3: [(entity_factories.chest, 25)],
+    5: [(entity_factories.chest, 35)],
 }
 
 def get_max_value_for_floor(
@@ -111,21 +122,36 @@ def place_entities(room: RectangularRoom, dungeon: GameMap, floor_number: int,) 
         0, get_max_value_for_floor(max_items_by_floor, floor_number)
     )
 
+    number_of_chests = random.randint(
+        0, get_max_value_for_floor(max_chests_by_floor, floor_number)
+    )
+
     monsters: List[Entity] = get_entities_at_random(
         enemy_chances, number_of_monsters, floor_number
     )
     items: List[Entity] = get_entities_at_random(
         item_chances, number_of_items, floor_number
     )
+    chests: List[Entity] = get_entities_at_random(
+        chest_chances, number_of_chests, floor_number
+    )
 
-    
-
-    for entity in monsters + items:
+    for entity in monsters + items + chests:
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
 
         if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            entity.spawn(dungeon, x, y)
+            if entity == entity_factories.chest:
+                chest = entity.spawn(dungeon, x, y)
+                # Generar contenido basado en el nivel +1 para mejor loot
+                chest_items = get_entities_at_random(
+                    item_chances, 
+                    random.randint(1, 3),  # Entre 1-3 objetos
+                    floor_number + 1  # Nivel aumentado para mejor botín
+                )
+                chest.inventory.items.extend(chest_items)
+            else:
+                entity.spawn(dungeon, x, y)
 
 def tunnel_between(
     start: Tuple[int, int], end: Tuple[int, int]

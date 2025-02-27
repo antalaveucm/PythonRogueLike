@@ -4,7 +4,7 @@ from components.equipment import Equipment
 from components.fighter import Fighter
 from components.inventory import Inventory
 from components.level import Level
-from entity import Actor, Item
+from entity import Actor, Item, Container
 
 player = Actor(
     char="@",
@@ -13,7 +13,7 @@ player = Actor(
     ai_cls=HostileEnemy,
     equipment=Equipment(),
     fighter=Fighter(hp=30, base_defense=1, base_power=3),
-    inventory=Inventory(capacity=26),
+    inventory=Inventory(capacity=9),
     level=Level(level_up_base=200),
 )
 
@@ -82,4 +82,11 @@ leather_armor = Item(
 
 chain_mail = Item(
     char="[", color=(139, 69, 19), name="Chain Mail", equippable=equippable.ChainMail()
+)
+
+chest = Container(
+    char="M",
+    color=(20, 200, 20),
+    name="Chest",
+    inventory=Inventory(capacity=3)
 )

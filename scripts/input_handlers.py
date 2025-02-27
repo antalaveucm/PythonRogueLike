@@ -10,7 +10,7 @@ from actions import (
     Action,
     BumpAction,
     PickupAction,
-    WaitAction
+    WaitAction,
 )
 
 import color
@@ -18,7 +18,7 @@ import exceptions
 
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Item
+    from entity import Item, Container
 
 MOVE_KEYS = {
     # Arrow keys.
@@ -366,6 +366,73 @@ class AreaRangedAttackHandler(SelectIndexHandler):
     def on_index_selected(self, x: int, y: int) -> Optional[Action]:
         return self.callback((x, y))
 
+class ContainerInventoryHandler(AskUserEventHandler):
+    """Maneja la interacción con el inventario de un contenedor"""
+    def __init__(self, engine: Engine, container: Container):
+        super().__init__(engine)
+        self.container = container
+        self.title = f"Contenido de {container.name}"
+        self.engine = engine
+
+    def on_render(self, console: tcod.Console) -> None:
+        super().on_render(console)
+        
+        # Configurar dimensiones del menú
+        number_of_items = len(self.container.inventory.items)
+        height = max(3, number_of_items + 2)
+        width = max(len(self.title) + 4, 30)
+
+        # Posicionar el menú según la ubicación del jugador
+        x = 40 if self.engine.player.x <= 30 else 0
+        y = 0
+
+        # Dibujar el marco
+        console.draw_frame(
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            title=self.title,
+            clear=True,
+            fg=(255, 255, 255),
+            bg=(0, 0, 0),
+        )
+
+        # Mostrar items
+        if number_of_items > 0:
+            for i, item in enumerate(self.container.inventory.items):
+                item_key = chr(ord("1") + i)
+                item_text = f"({item_key}) {item.name}"
+                console.print(x + 1, y + i + 1, item_text)
+        else:
+            console.print(x + 1, y + 1, "(Vacío)")
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
+        player = self.engine.player
+        key = event.sym
+        
+        if key == tcod.event.K_ESCAPE:
+            return MainGameEventHandler(self.engine)
+        
+        # Manejar selección numérica
+        index = key - tcod.event.K_1
+        if 0 <= index <= 9:
+            try:
+                selected_item = self.container.inventory.items[index]
+            except IndexError:
+                self.engine.message_log.add_message("Selección inválida", color.invalid)
+                return None
+            
+            # Transferir item al jugador
+            if len(player.inventory.items) >= player.inventory.capacity:
+                raise exceptions.Impossible("Tu inventario está lleno")
+                
+            self.container.inventory.items.remove(selected_item)
+            player.inventory.items.append(selected_item)
+            self.engine.message_log.add_message(
+                f"Cogiste {selected_item.name} del {self.container.name}!", color.green
+            )
+
 class MainGameEventHandler(EventHandler):
 
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
@@ -402,10 +469,19 @@ class MainGameEventHandler(EventHandler):
             return CharacterScreenEventHandler(self.engine)
         elif key == tcod.event.K_n:
             return LookHandler(self.engine)
-
+        elif key == tcod.event.K_f:
+            # Detectar si estamos sobre un contenedor
+            target = self.engine.game_map.get_container_at_location(
+                self.engine.player.x, self.engine.player.y
+            )
+            if target:
+                return ContainerInventoryHandler(self.engine, target)
+            else:
+                pass
+                
         # No valid key was pressed
         return action
-    
+
 class GameOverEventHandler(EventHandler):
     def on_quit(self) -> None:
         """Handle exiting out of a finished game."""
@@ -615,3 +691,4 @@ class InventoryDropHandler(InventoryEventHandler):
     def on_item_selected(self, item: Item) -> Optional[ActionOrHandler]:
         """Drop this item."""
         return actions.DropItem(self.engine.player, item)
+    
